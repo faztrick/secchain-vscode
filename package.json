@@ -36,6 +36,20 @@
       {
         "command": "secchain.status",
         "title": "SecChain: Live Security Status"
+      },
+      {
+        "command": "secchain.protection",
+        "title": "SecChain: Scan System Protection",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "secchain.prevent",
+        "title": "SecChain: Prevent — Auto-Fix Security Issues",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "secchain.viewLog",
+        "title": "SecChain: View Security Log"
       }
     ],
     "viewsContainers": {
@@ -56,6 +70,33 @@
         {
           "id": "secchain.statusView",
           "name": "Security Status"
+        },
+        {
+          "id": "secchain.protectionView",
+          "name": "Protection"
+        },
+        {
+          "id": "secchain.logView",
+          "name": "Protection Log"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "secchain.protection",
+          "when": "view == secchain.protectionView",
+          "group": "navigation"
+        },
+        {
+          "command": "secchain.prevent",
+          "when": "view == secchain.protectionView",
+          "group": "navigation"
+        },
+        {
+          "command": "secchain.clearLog",
+          "when": "view == secchain.logView",
+          "group": "navigation"
         }
       ]
     }
