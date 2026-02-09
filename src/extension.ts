@@ -14,22 +14,38 @@ interface Block {
     h: string;
 }
 
-const CHAIN_PATH = '/var/lib/secchain/chain.json';
-const SECCHAIN_BIN = '/usr/local/bin/secchain';
+const CHAIN_REL_PATH = 'secchain_data/chain.json';
+const CLI_REL_PATH = 'secchain_cli.py';
+
+function getWorkspaceRoot(): string {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+}
+
+function getChainPath(): string {
+    return join(getWorkspaceRoot(), CHAIN_REL_PATH);
+}
+
+function getCliPath(): string {
+    return join(getWorkspaceRoot(), CLI_REL_PATH);
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────
 function loadChain(): Block[] {
     try {
-        if (!existsSync(CHAIN_PATH)) { return []; }
-        return JSON.parse(readFileSync(CHAIN_PATH, 'utf-8'));
+        const path = getChainPath();
+        if (!path || !existsSync(path)) { return []; }
+        return JSON.parse(readFileSync(path, 'utf-8'));
     } catch {
         return [];
     }
 }
 
 function runSecChain(cmd: string): Promise<string> {
+    const cli = getCliPath();
+    if (!cli) { return Promise.reject(new Error('No workspace open')); }
+    
     return new Promise((resolve, reject) => {
-        execFile('sudo', [SECCHAIN_BIN, cmd], { timeout: 30000 }, (err, stdout, stderr) => {
+        execFile('python3', [cli, cmd], { timeout: 30000, cwd: getWorkspaceRoot() }, (err, stdout, stderr) => {
             if (err) { reject(new Error(stderr || err.message)); }
             else { resolve(stdout.trim()); }
         });
@@ -95,8 +111,8 @@ class ChainTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
                 new BlockDetailItem('TMCP', String(b.tmcp)),
             ];
             // show watched file statuses
-            const fileKeys = Object.keys(b.s).filter(k => k.startsWith('/'));
-            const checkKeys = Object.keys(b.s).filter(k => !k.startsWith('/'));
+            const fileKeys = Object.keys(b.s).filter(k => k.startsWith('file:'));
+            const checkKeys = Object.keys(b.s).filter(k => !k.startsWith('file:'));
             if (fileKeys.length) {
                 items.push(new BlockDetailItem('Files', `${fileKeys.length} monitored`));
             }
