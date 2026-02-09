@@ -6,16 +6,17 @@ import hashlib, json, os, subprocess, sys
 from time import time
 from datetime import datetime
 
-CHAIN_DIR = "/var/lib/secchain"
+CHAIN_DIR = os.path.join(os.getcwd(), "secchain_data")
 CHAIN_FILE = os.path.join(CHAIN_DIR, "chain.json")
 OWNER = "ffaz@kalifaz"
 HOME = os.path.expanduser("~")
 
 WATCHED = [
-    "/etc/passwd", "/etc/shadow", "/etc/sudoers", "/etc/hosts",
-    "/etc/ssh/sshd_config",
-    HOME + "/.config/Code - Insiders/User/settings.json",
-    HOME + "/.config/Code - Insiders/User/mcp.json",
+    "secchain_cli.py",
+    "src/extension.ts",
+    "mcp-server.py",
+    "package.json",
+    "README.md"
 ]
 
 GENESIS_REWARD = 100
@@ -174,7 +175,11 @@ Usage: secchain <command>
   status  - Show balance & trust level
   ledger  - Show all transactions
   show    - Show recent blocks
-  export  - Export chain as JSON"""
+  export  - Export chain as JSON
+  wallet  - (Coming Soon) Manage TMCP Wallet
+  ui      - (Coming Soon) Launch CLI Dashboard
+  market  - (Coming Soon) Trust Marketplace
+  web     - (Coming Soon) Web Interface"""
 
 def main():
     if len(sys.argv) < 2:
@@ -189,6 +194,10 @@ def main():
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 5
         cmd_show(chain, n)
     elif cmd == "export": print(json.dumps(chain, indent=2))
+    elif cmd == "wallet": print("🚧 TMCP Wallet: Coming Soon! 🚧")
+    elif cmd == "ui": print("🚧 CLI Dashboard: Coming Soon! 🚧")
+    elif cmd == "market": print("🚧 Trust Market: Coming Soon! 🚧")
+    elif cmd == "web": print("🚧 Web Interface: Coming Soon! 🚧")
     else: print(USAGE)
 
 if __name__ == "__main__":
