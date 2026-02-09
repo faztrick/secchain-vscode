@@ -1,0 +1,75 @@
+{
+  "name": "secchain",
+  "displayName": "SecChain — Security Blockchain + TrustyMCP",
+  "description": "Local security blockchain with TrustyMCP cryptocurrency. Monitors system integrity and provides MCP tools for GitHub Copilot.",
+  "version": "1.0.0",
+  "publisher": "ffaz",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "secchain.record",
+        "title": "SecChain: Record Security Snapshot"
+      },
+      {
+        "command": "secchain.verify",
+        "title": "SecChain: Verify Chain Integrity"
+      },
+      {
+        "command": "secchain.show",
+        "title": "SecChain: Show All Blocks"
+      },
+      {
+        "command": "secchain.balance",
+        "title": "SecChain: TrustyMCP Balance"
+      },
+      {
+        "command": "secchain.status",
+        "title": "SecChain: Live Security Status"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "secchain-explorer",
+          "title": "SecChain",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "secchain-explorer": [
+        {
+          "id": "secchain.chainView",
+          "name": "Blockchain"
+        },
+        {
+          "id": "secchain.statusView",
+          "name": "Security Status"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --allow-missing-repository",
+    "install-ext": "code-insiders --install-extension secchain-1.0.0.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.100.0",
+    "typescript": "^5.5.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
