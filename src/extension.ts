@@ -733,95 +733,142 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showWarningMessage(`SecChain: ${failed.length} protection issue(s) found — check output log`);
             }
 
-            logEntry('SCAN', `Protection scan: ${passed}/${results.length} passed`);
+            // Log to persistent file
+            logProtection(`SCAN: ${passed}/${results.length} passed`);
             for (const r of failed) {
-                logEntry('ISSUE', `${r.name}: ${r.status}`);
+                logProtection(`FAIL: ${r.name} — ${r.status}`);
+            }
+            logTree.refresh();
+        }),
+
+        // ── Prevent: Auto-fix security issues ────────────────────────
+        vscode.commands.registerCommand('secchain.prevent', async () => {
+            const picks = PREVENT_ACTIONS.map(a => ({
+                label: a.name,
+                description: a.description,
+                picked: false,
+            }));
+
+            const selected = await vscode.window.showQuickPick(picks, {
+                canPickMany: true,
+                placeHolder: 'Select security fixes to apply',
+                title: 'SecChain: Prevent — Auto-fix Security Issues',
+            });
+
+            if (!selected || selected.length === 0) { return; }
+
+            output.clear();
+            output.appendLine('═══ SecChain Prevention ═══\n');
+            logProtection('PREVENT: Started prevention run');
+
+            let fixed = 0;
+            let failed2 = 0;
+
+            for (const pick of selected) {
+                const action = PREVENT_ACTIONS.find(a => a.name === pick.label)!;
+                output.appendLine(`▶ ${action.name}: ${action.description}`);
+                output.appendLine(`  Running: ${action.fix}`);
+
+                const result = await runShellFix(action.fix);
+
+                if (result.ok) {
+                    const verify = await shellCmd(action.verify);
+                    output.appendLine(`  Result: ${verify}`);
+                    output.appendLine(`  ✓ FIXED\n`);
+                    logProtection(`FIX OK: ${action.name} — ${verify}`);
+                    fixed++;
+                } else {
+                    output.appendLine(`  ✗ FAILED: ${result.stdout}\n`);
+                    logProtection(`FIX FAIL: ${action.name} — ${result.stdout}`);
+                    failed2++;
+                }
+            }
+
+            output.appendLine(`═══ Done: ${fixed} fixed, ${failed2} failed ═══`);
+            output.show(true);
+            logProtection(`PREVENT: Done — ${fixed} fixed, ${failed2} failed`);
+
+            await runProtectionScan();
+            refreshAll();
+
+            if (failed2 === 0) {
+                vscode.window.showInformationMessage(`SecChain: ${fixed} security fix(es) applied!`);
+            } else {
+                vscode.window.showWarningMessage(`SecChain: ${fixed} fixed, ${failed2} failed — check log`);
             }
         }),
 
-        vscode.commands.registerCommand('secchain.prevent', async () => {
+        // ── Prevent All: Fix everything at once ──────────────────────
+        vscode.commands.registerCommand('secchain.preventAll', async () => {
             const confirm = await vscode.window.showWarningMessage(
-                'SecChain Prevent: This will auto-fix security issues (requires sudo). Continue?',
+                'Apply ALL security fixes? This will modify system services.',
                 { modal: true },
-                'Fix All', 'Pick & Choose'
+                'Yes, Fix Everything'
             );
-            if (!confirm) { return; }
+            if (confirm !== 'Yes, Fix Everything') { return; }
 
             output.clear();
-            output.appendLine(`═══ Prevention — ${new Date().toLocaleTimeString()} ═══\n`);
-            logEntry('PREVENT', 'Prevention scan started');
+            output.appendLine('═══ SecChain: Fix Everything ═══\n');
+            logProtection('PREVENT ALL: Applying all fixes');
 
-            let fixedCount = 0;
-            let skippedCount = 0;
-            let failedCount = 0;
+            let fixed = 0;
+            let failed2 = 0;
 
-            for (const fix of PREVENTION_FIXES) {
-                const raw = await shellCmd(fix.check);
-                if (fix.isOk(raw)) {
-                    output.appendLine(`  ✓ ${fix.name}: Already OK`);
-                    skippedCount++;
+            for (const action of PREVENT_ACTIONS) {
+                const current = await shellCmd(action.check);
+                const needsFix = action.name === 'Restrict dmesg' ? current !== '1'
+                    : action.name === 'Block Ping' ? current !== '1'
+                    : action.name === 'Stop SSH' ? current === 'active'
+                    : action.name === 'Stop Bluetooth' ? current === 'active'
+                    : action.name === 'Kill Remote Access' ? (parseInt(current) || 0) > 0
+                    : current !== 'active';
+
+                if (!needsFix) {
+                    output.appendLine(`  ✓ ${action.name}: Already OK`);
                     continue;
                 }
 
-                // If Pick & Choose, ask for each fix
-                if (confirm === 'Pick & Choose') {
-                    const apply = await vscode.window.showQuickPick(
-                        ['Yes — Fix it', 'No — Skip'],
-                        { placeHolder: `Fix "${fix.name}"? (${fix.description})` }
-                    );
-                    if (!apply || apply.startsWith('No')) {
-                        output.appendLine(`  ⊘ ${fix.name}: Skipped by user`);
-                        logEntry('SKIP', fix.name);
-                        skippedCount++;
-                        continue;
-                    }
-                }
-
-                output.appendLine(`  ⚡ Fixing: ${fix.name}...`);
-                output.appendLine(`     → ${fix.description}`);
-                const result = await shellCmdWithStatus(fix.fix);
-
-                // Verify the fix worked
-                const verify = await shellCmd(fix.check);
-                if (fix.isOk(verify)) {
-                    output.appendLine(`  ✓ ${fix.name}: FIXED`);
-                    logEntry('FIXED', `${fix.name}: ${fix.description}`);
-                    fixedCount++;
+                output.appendLine(`  ▶ Fixing: ${action.name}...`);
+                const result = await runShellFix(action.fix);
+                if (result.ok) {
+                    output.appendLine(`    ✓ Fixed`);
+                    logProtection(`FIX OK: ${action.name}`);
+                    fixed++;
                 } else {
-                    output.appendLine(`  ✗ ${fix.name}: Fix attempted but verification failed`);
-                    output.appendLine(`     Output: ${result.out || '(none)'}`);
-                    logEntry('FAIL', `${fix.name}: fix did not apply`);
-                    failedCount++;
+                    output.appendLine(`    ✗ Failed: ${result.stdout}`);
+                    logProtection(`FIX FAIL: ${action.name}`);
+                    failed2++;
                 }
             }
 
-            output.appendLine(`\n═══ Summary ═══`);
-            output.appendLine(`  Fixed:   ${fixedCount}`);
-            output.appendLine(`  OK:      ${skippedCount}`);
-            output.appendLine(`  Failed:  ${failedCount}`);
+            output.appendLine(`\n═══ Result: ${fixed} fixed, ${failed2} failed ═══`);
             output.show(true);
+            logProtection(`PREVENT ALL: ${fixed} fixed, ${failed2} failed`);
 
-            logEntry('PREVENT', `Done: ${fixedCount} fixed, ${skippedCount} ok, ${failedCount} failed`);
+            await runProtectionScan();
+            refreshAll();
 
-            if (fixedCount > 0) {
-                vscode.window.showInformationMessage(`SecChain Prevent: Fixed ${fixedCount} issue(s)!`);
-                // Re-scan protection panel
-                await runProtectionScan();
-                protectionTree.refresh();
-            } else if (failedCount > 0) {
-                vscode.window.showWarningMessage(`SecChain Prevent: ${failedCount} fix(es) failed — check output log`);
-            } else {
-                vscode.window.showInformationMessage('SecChain Prevent: Everything already secure!');
-            }
+            vscode.window.showInformationMessage(`SecChain: ${fixed} fixed, ${failed2} failed`);
         }),
 
+        // ── View Protection Log ──────────────────────────────────────
         vscode.commands.registerCommand('secchain.viewLog', async () => {
             const logPath = getLogPath();
             if (existsSync(logPath)) {
                 const doc = await vscode.workspace.openTextDocument(logPath);
                 await vscode.window.showTextDocument(doc);
             } else {
-                vscode.window.showInformationMessage('SecChain: No security log yet. Run a scan first.');
+                vscode.window.showInformationMessage('No protection log yet. Run a scan first.');
+            }
+        }),
+
+        // ── Clear Log ────────────────────────────────────────────────
+        vscode.commands.registerCommand('secchain.clearLog', async () => {
+            const logPath = getLogPath();
+            if (existsSync(logPath)) {
+                writeFileSync(logPath, '');
+                logTree.refresh();
+                vscode.window.showInformationMessage('Protection log cleared.');
             }
         })
     );
