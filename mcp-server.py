@@ -17,15 +17,17 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 # ── SecChain constants ────────────────────────────────────────────────
-DIR = Path("/var/lib/secchain")
+WORKDIR = Path(os.path.dirname(os.path.abspath(__file__)))
+DIR = WORKDIR / "secchain_data"
 CHAIN = DIR / "chain.json"
-SECCHAIN_BIN = "/usr/local/bin/secchain"
+CLI_PATH = WORKDIR / "secchain_cli.py"
 
 FILES = [
-    "/home/ffaz/.config/Code - Insiders/User/settings.json",
-    "/home/ffaz/.config/Code - Insiders/User/mcp.json",
-    "/etc/hosts", "/etc/passwd", "/etc/sudoers",
-    "/etc/sysctl.d/99-security.conf", "/usr/local/bin/watchdog.sh",
+    str(WORKDIR / "secchain_cli.py"),
+    str(WORKDIR / "src" / "extension.ts"),
+    str(WORKDIR / "mcp-server.py"),
+    str(WORKDIR / "package.json"),
+    str(WORKDIR / "README.md"),
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -57,11 +59,8 @@ def get_state() -> dict[str, str]:
         "ufw": "sudo ufw status 2>/dev/null|head -1",
         "ssh": "systemctl is-active ssh 2>/dev/null",
         "ports": "ss -tlnp 2>/dev/null|grep -c LISTEN",
-        "mcp": (
-            "grep -c 'mcp.enabled.*true' "
-            "'/home/ffaz/.config/Code - Insiders/User/settings.json' "
-            "2>/dev/null || echo 0"
-        ),
+        "bluetooth": "systemctl is-active bluetooth 2>/dev/null",
+        "bt_devices": "bluetoothctl devices Connected 2>/dev/null || echo NONE",
     }
     for k, c in checks.items():
         try:
@@ -75,12 +74,42 @@ def get_state() -> dict[str, str]:
 def run_secchain(cmd: str) -> str:
     try:
         r = subprocess.run(
-            ["sudo", SECCHAIN_BIN, cmd],
-            capture_output=True, text=True, timeout=30
+            ["python3", str(CLI_PATH), cmd],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(WORKDIR)
         )
         return r.stdout.strip() or r.stderr.strip()
     except Exception as e:
         return f"Error: {e}"
+
+
+def get_bluetooth_status() -> dict[str, str]:
+    """Get full Bluetooth status: service, rfkill, connected devices."""
+    bt = {}
+    try:
+        r = subprocess.run("systemctl is-active bluetooth", shell=True, capture_output=True, text=True, timeout=5)
+        bt["service"] = r.stdout.strip()
+    except Exception:
+        bt["service"] = "unknown"
+    try:
+        r = subprocess.run("rfkill list bluetooth", shell=True, capture_output=True, text=True, timeout=5)
+        out = r.stdout
+        bt["soft_blocked"] = "yes" if "Soft blocked: yes" in out else "no"
+        bt["hard_blocked"] = "yes" if "Hard blocked: yes" in out else "no"
+    except Exception:
+        bt["soft_blocked"] = "unknown"
+        bt["hard_blocked"] = "unknown"
+    try:
+        r = subprocess.run("bluetoothctl paired-devices", shell=True, capture_output=True, text=True, timeout=5)
+        bt["paired"] = r.stdout.strip() or "NONE"
+    except Exception:
+        bt["paired"] = "unknown"
+    try:
+        r = subprocess.run("bluetoothctl devices Connected", shell=True, capture_output=True, text=True, timeout=5)
+        bt["connected"] = r.stdout.strip() or "NONE"
+    except Exception:
+        bt["connected"] = "unknown"
+    return bt
 
 
 # ── MCP Server ────────────────────────────────────────────────────────
@@ -157,6 +186,15 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["block_number"],
             },
+        ),
+        Tool(
+            name="secchain_bluetooth",
+            description=(
+                "Get full Bluetooth security status. Shows service state, "
+                "rfkill soft/hard block status, paired devices, and connected devices. "
+                "Useful for detecting unauthorized Bluetooth connections."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []},
         ),
     ]
 
@@ -265,6 +303,25 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         b = chain[bn]
         text = json.dumps(b, indent=2)
         return [TextContent(type="text", text=f"Block #{bn} details:\n{text}")]
+
+    elif name == "secchain_bluetooth":
+        bt = get_bluetooth_status()
+        lines = [
+            "=== Bluetooth Security Status ===",
+            f"Service:      {bt['service']}",
+            f"Soft Blocked: {bt['soft_blocked']}",
+            f"Hard Blocked: {bt['hard_blocked']}",
+            f"Paired:       {bt['paired']}",
+            f"Connected:    {bt['connected']}",
+        ]
+        # Security assessment
+        if bt['service'] == 'active' and bt['connected'] != 'NONE':
+            lines.append("\n⚠ WARNING: Active Bluetooth connection detected!")
+        elif bt['service'] == 'active':
+            lines.append("\nBluetooth ON but no devices connected.")
+        elif bt['service'] == 'inactive':
+            lines.append("\n✓ Bluetooth service is OFF — secure.")
+        return [TextContent(type="text", text="\n".join(lines))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

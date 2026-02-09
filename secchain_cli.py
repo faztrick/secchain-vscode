@@ -62,6 +62,13 @@ def collect_state():
     state["mcp_off"] = "1" if not run("pgrep -f mcp-server") else "0"
     state["ssh_off"] = "1" if not run("pgrep sshd") else "0"
     state["ufw_on"] = "1" if "active" in run("sudo ufw status 2>/dev/null || true") else "0"
+    # Bluetooth monitoring
+    bt_service = run("systemctl is-active bluetooth 2>/dev/null")
+    state["bt_active"] = "1" if bt_service == "active" else "0"
+    bt_rfkill = run("rfkill list bluetooth 2>/dev/null")
+    state["bt_blocked"] = "1" if "Soft blocked: yes" in bt_rfkill or "Hard blocked: yes" in bt_rfkill else "0"
+    bt_connected = run("bluetoothctl devices Connected 2>/dev/null")
+    state["bt_devices"] = bt_connected if bt_connected else "NONE"
     return state
 
 def check_violations(state):
@@ -69,6 +76,8 @@ def check_violations(state):
     if state.get("mcp_off") != "1": v.append("MCP_PROCESS_DETECTED")
     if state.get("ssh_off") != "1": v.append("SSH_ACTIVE")
     if state.get("ufw_on") != "1": v.append("FIREWALL_INACTIVE")
+    if state.get("bt_active") == "1" and state.get("bt_devices", "NONE") != "NONE":
+        v.append("BT_DEVICE_CONNECTED")
     return v
 
 def find_changes(chain, state):
