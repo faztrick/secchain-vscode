@@ -1,0 +1,11 @@
+[
+  {
+    "id": "f6a648dc1e49",
+    "severity": "MEDIUM",
+    "title": "Lie detected: \"remote access tools running\"",
+    "detail": "Confidence: 65%",
+    "source": "claim_check",
+    "timestamp": "2026-02-09T19:11:22.159732",
+    "acknowledged": false
+  }
+]

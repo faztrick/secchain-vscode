@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { execFile, exec } from 'child_process';
-import { readFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 // ── SecChain data types ──────────────────────────────────────────────
@@ -478,12 +478,12 @@ class ProtectionTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem>
 }
 
 // ── Protection Log (persistent) ──────────────────────────────────────
-function getLogPath(): string {
+function getProtectionLogPath(): string {
     return join(getWorkspaceRoot(), 'secchain_data', 'protection.log');
 }
 
 function logProtection(entry: string) {
-    const logPath = getLogPath();
+    const logPath = getProtectionLogPath();
     try {
         const dir = join(getWorkspaceRoot(), 'secchain_data');
         if (!existsSync(dir)) { mkdirSync(dir, { recursive: true }); }
@@ -494,7 +494,7 @@ function logProtection(entry: string) {
 
 function readProtectionLog(): string[] {
     try {
-        const logPath = getLogPath();
+        const logPath = getProtectionLogPath();
         if (!existsSync(logPath)) { return []; }
         return readFileSync(logPath, 'utf-8').split('\n').filter(l => l.trim());
     } catch { return []; }
@@ -853,7 +853,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // ── View Protection Log ──────────────────────────────────────
         vscode.commands.registerCommand('secchain.viewLog', async () => {
-            const logPath = getLogPath();
+            const logPath = getProtectionLogPath();
             if (existsSync(logPath)) {
                 const doc = await vscode.workspace.openTextDocument(logPath);
                 await vscode.window.showTextDocument(doc);
@@ -864,7 +864,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // ── Clear Log ────────────────────────────────────────────────
         vscode.commands.registerCommand('secchain.clearLog', async () => {
-            const logPath = getLogPath();
+            const logPath = getProtectionLogPath();
             if (existsSync(logPath)) {
                 writeFileSync(logPath, '');
                 logTree.refresh();
@@ -881,12 +881,13 @@ export function activate(context: vscode.ExtensionContext) {
             const provider: vscode.McpServerDefinitionProvider = {
                 provideMcpServerDefinitions: async () => {
                     return [
-                        new vscode.McpStdioServerDefinition({
-                            label: 'SecChain',
-                            command: 'python3',
-                            args: [mcpServerPath],
-                            version: '1.0.0',
-                        })
+                        new vscode.McpStdioServerDefinition(
+                            'SecChain',
+                            'python3',
+                            [mcpServerPath],
+                            {},
+                            '1.0.0'
+                        )
                     ];
                 }
             };

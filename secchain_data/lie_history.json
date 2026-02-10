@@ -1,0 +1,194 @@
+[
+  {
+    "claim": "ClamAV is running",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "clamav",
+        "label": "ClamAV is running",
+        "actual": true,
+        "raw": "active",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T18:59:21.995603"
+  },
+  {
+    "claim": "SSH is running",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "ssh",
+        "label": "SSH is disabled",
+        "actual": true,
+        "raw": "inactive\ninactive",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T18:59:26.628223"
+  },
+  {
+    "claim": "no remote access tools",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "remote_access",
+        "label": "Remote access tools running",
+        "actual": false,
+        "raw": "0",
+        "score": 1
+      },
+      {
+        "probe": "no_remote",
+        "label": "No remote access tools",
+        "actual": true,
+        "raw": "0",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T18:59:26.674159"
+  },
+  {
+    "claim": "firewall is disabled",
+    "verdict": "LIE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "ufw",
+        "label": "UFW firewall is active",
+        "actual": true,
+        "raw": "Status: active",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T18:59:26.748243"
+  },
+  {
+    "claim": "bluetooth devices connected",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "bluetooth_on",
+        "label": "Bluetooth is active",
+        "actual": true,
+        "raw": "active",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T18:59:26.773084"
+  },
+  {
+    "claim": "remote access tools running",
+    "verdict": "LIE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "remote_access",
+        "label": "Remote access tools running",
+        "actual": false,
+        "raw": "0",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T19:11:22.159380"
+  },
+  {
+    "claim": "SSH is running",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "ssh",
+        "label": "SSH is disabled",
+        "actual": true,
+        "raw": "inactive\ninactive",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T19:11:22.192201"
+  },
+  {
+    "claim": "no remote access",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "probes": [
+      {
+        "probe": "remote_access",
+        "label": "Remote access tools running",
+        "actual": false,
+        "raw": "0",
+        "score": 1
+      },
+      {
+        "probe": "no_remote",
+        "label": "No remote access tools",
+        "actual": true,
+        "raw": "0",
+        "score": 1
+      }
+    ],
+    "timestamp": "2026-02-09T19:11:22.246875"
+  },
+  {
+    "claim": "ClamAV is running",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "comparison": [
+      {
+        "probe": "clamav",
+        "label": "ClamAV running",
+        "actual": true,
+        "raw": "active",
+        "score": 1
+      }
+    ],
+    "ts": "2026-02-09T19:14:03.340416"
+  },
+  {
+    "claim": "SSH is active",
+    "verdict": "TRUE",
+    "confidence": 65,
+    "comparison": [
+      {
+        "probe": "ssh_off",
+        "label": "SSH disabled",
+        "actual": true,
+        "raw": "inactive\ninactive",
+        "score": 1
+      }
+    ],
+    "ts": "2026-02-09T19:14:03.371345"
+  },
+  {
+    "claim": "no remote connections",
+    "verdict": "TRUE",
+    "confidence": 80,
+    "comparison": [
+      {
+        "probe": "no_estab",
+        "label": "No established connections",
+        "actual": false,
+        "raw": "7",
+        "score": 2
+      },
+      {
+        "probe": "no_remote",
+        "label": "No remote tools",
+        "actual": true,
+        "raw": "0",
+        "score": 1
+      }
+    ],
+    "ts": "2026-02-09T19:14:03.438088"
+  },
+  {
+    "claim": "SSH is running",
+    "verdict": "LIE",
+    "confidence": 80,
+    "ts": "2026-02-09T19:14:48.852788"
+  }
+]
